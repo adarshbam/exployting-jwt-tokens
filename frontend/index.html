@@ -1,0 +1,713 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>JWT Vulnerability Demo</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 750px;
+        margin: 40px auto;
+        padding: 0 20px;
+      }
+      button {
+        padding: 8px 16px;
+        margin: 5px 5px 5px 0;
+        cursor: pointer;
+      }
+      .danger {
+        background: #fee;
+        border: 1px solid #c00;
+        color: #c00;
+      }
+      .safe {
+        background: #efe;
+        border: 1px solid #070;
+        color: #070;
+      }
+      section {
+        margin-bottom: 20px;
+        padding-bottom: 14px;
+        border-bottom: 1px solid #eee;
+      }
+      code {
+        background: #eee;
+        padding: 2px 6px;
+      }
+      h3 {
+        margin-bottom: 6px;
+      }
+      table {
+        border-collapse: collapse;
+        margin: 8px 0;
+        width: 100%;
+      }
+      th,
+      td {
+        border: 1px solid #ccc;
+        padding: 6px 10px;
+        text-align: left;
+        font-size: 14px;
+      }
+      th {
+        background: #f0f0f0;
+      }
+      #output {
+        margin-top: 16px;
+        padding: 12px;
+        border: 1px solid #ccc;
+        background: #f9f9f9;
+        white-space: pre-wrap;
+        word-break: break-all;
+        min-height: 50px;
+        max-height: 500px;
+        overflow-y: auto;
+      }
+      .tag {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: bold;
+      }
+      .tag-admin {
+        background: #fde;
+        color: #a00;
+      }
+      .tag-user {
+        background: #def;
+        color: #05a;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>🔓 JWT Vulnerability Demo</h1>
+    <p>
+      Make sure you are opening in localhost:[port] not on a IP address. <br />
+      And make sure you are running backend servers for it to work.
+    </p>
+    <p>
+      Shows why <code>jwt.decode()</code> instead of
+      <code>jwt.verify()</code> causes <strong>serious data breaches</strong>.
+      And using jwt.veryify() make sure to set the alogrithm correctly because
+      same data breaches will occur otherwise.<br /><br />
+      Genereate a tampered token and see for yourself by copy pasting the
+      tampered token in the cookie value.
+      <br /><br />
+      To see same vernerability in assymetric keys click
+      <a href="./break-assymetric-keys.html">here</a>
+    </p>
+
+    <section>
+      <h3>Users in the system</h3>
+      <table id="usersTable">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Username</th>
+            <th>Role</th>
+            <th>Email</th>
+            <th>Password</th>
+          </tr>
+        </thead>
+        <tbody id="usersBody"></tbody>
+      </table>
+      <p>
+        We only know <strong>adarsh's</strong> credentials. We do NOT know any
+        admin passwords.
+      </p>
+    </section>
+
+    <section>
+      <h3>Step 1 — Login as adarsh (regular user)</h3>
+      <p>Credentials: <code>adarsh / pass123</code></p>
+      <button id="loginBtn">Login as adarsh</button>
+      <button
+        id="logoutBtn"
+        style="background: #fdd; border: 1px solid #d88; color: #a00"
+      >
+        Logout
+      </button>
+    </section>
+
+    <section>
+      <h3>Step 2 — View Dashboard (legit token)</h3>
+      <p>
+        As a regular user, adarsh can only see <strong>his own info</strong>.
+      </p>
+      <button id="dashBtn">Open Dashboard (vulnerable route)</button>
+      <button id="dashSecureBtn" class="safe">
+        Open Dashboard (secure route)
+      </button>
+    </section>
+
+    <section>
+      <h3>Step 3 — ⚠️ Tamper the Token</h3>
+      <p>
+        Change <code>"role":"user"</code> → <code>"role":"admin"</code> without
+        knowing the secret key.
+      </p>
+      <button id="tamperBtn" class="danger">
+        🛑 Tamper Token → Become Admin
+      </button>
+    </section>
+
+    <section>
+      <h3>Step 4 — View Dashboard with tampered token</h3>
+      <p>
+        See the difference: the vulnerable route leaks
+        <strong>ALL 10 users' private data</strong>!
+      </p>
+      <button id="tamperDashBtn" class="danger">
+        Vulnerable Dashboard (jwt.decode) 🔓
+      </button>
+      <button id="tamperSecureBtn" class="safe">
+        Secure Dashboard (jwt.verify) ✅
+      </button>
+    </section>
+
+    <section>
+      <div
+        style="
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 6px;
+        "
+      >
+        <h3 style="margin-bottom: 0">Current Token</h3>
+        <button
+          id="copyTokenBtn"
+          style="
+            padding: 4px 10px;
+            font-size: 13px;
+            font-weight: bold;
+            margin: 0;
+            background: #eee;
+            border: 1px solid #aaa;
+            border-radius: 4px;
+            cursor: pointer;
+          "
+        >
+          📋 Copy Token
+        </button>
+      </div>
+      <div
+        id="tokenDisplay"
+        style="
+          word-break: break-all;
+          padding: 8px;
+          border: 1px solid #ccc;
+          background: #fff;
+          min-height: 30px;
+          font-size: 13px;
+        "
+      ></div>
+    </section>
+
+    <h3>Output</h3>
+    <div id="output">
+      Click the buttons in order (Step 1 → 4) to see the vulnerability.
+    </div>
+
+    <script>
+      const API = "http://localhost:3000";
+
+      // Restore state from localStorage so it survives refresh
+      let token = localStorage.getItem("jwt_token") || "";
+      let tamperedToken = localStorage.getItem("jwt_tampered") || "";
+      let _lastToken = "";
+
+      // Sync from document.cookie in case you pasted it manually into the Application tab!
+      const cookieMatch = document.cookie.match(/(^| )token=([^;]+)/);
+      if (cookieMatch) {
+        token = cookieMatch[2];
+        tamperedToken = cookieMatch[2];
+      }
+
+      const output = document.getElementById("output");
+      const tokenDisplay = document.getElementById("tokenDisplay");
+      const usersBody = document.getElementById("usersBody");
+
+      // All users data (passwords hidden by default)
+      const allUsers = [
+        {
+          id: 1,
+          username: "rahul",
+          role: "admin",
+          email: "rahul@company.com",
+          password: "admin@123",
+        },
+        {
+          id: 2,
+          username: "priya",
+          role: "admin",
+          email: "priya@company.com",
+          password: "priya@admin",
+        },
+        {
+          id: 3,
+          username: "adarsh",
+          role: "user",
+          email: "adarsh@gmail.com",
+          password: "pass123",
+        },
+        {
+          id: 4,
+          username: "sneha",
+          role: "user",
+          email: "sneha@gmail.com",
+          password: "sneha456",
+        },
+        {
+          id: 5,
+          username: "vikram",
+          role: "user",
+          email: "vikram@gmail.com",
+          password: "vik789",
+        },
+        {
+          id: 6,
+          username: "ananya",
+          role: "user",
+          email: "ananya@gmail.com",
+          password: "ana321",
+        },
+        {
+          id: 7,
+          username: "karan",
+          role: "user",
+          email: "karan@yahoo.com",
+          password: "karan111",
+        },
+        {
+          id: 8,
+          username: "meera",
+          role: "user",
+          email: "meera@yahoo.com",
+          password: "meera222",
+        },
+        {
+          id: 9,
+          username: "arjun",
+          role: "user",
+          email: "arjun@outlook.com",
+          password: "arjun333",
+        },
+        {
+          id: 10,
+          username: "divya",
+          role: "user",
+          email: "divya@outlook.com",
+          password: "divya444",
+        },
+      ];
+
+      // state: "default" | "logged_in" | "admin_leaked"
+      let tableState = localStorage.getItem("jwt_tableState") || "default";
+
+      // Safety sync: If token was manually deleted, reset state
+      if (!token && !tamperedToken) {
+        tableState = "default";
+        localStorage.setItem("jwt_tableState", "default");
+      }
+
+      // Interval Trackers to separate UI changes from manual DevTools changes
+      let lastCookie =
+        (document.cookie.match(/(^| )token=([^;]+)/) || [])[2] || "";
+      let lastTokenH = localStorage.getItem("jwt_token") || "";
+      let lastTamperedH = localStorage.getItem("jwt_tampered") || "";
+
+      function saveState() {
+        localStorage.setItem("jwt_token", token);
+        localStorage.setItem("jwt_tampered", tamperedToken);
+        localStorage.setItem("jwt_tableState", tableState);
+        lastTokenH = token;
+        lastTamperedH = tamperedToken;
+      }
+
+      function getDecodedToken(t) {
+        if (!t) return null;
+        try {
+          return JSON.parse(atob(t.split(".")[1]));
+        } catch (e) {
+          return null;
+        }
+      }
+
+      function renderTable() {
+        const decodedUser = getDecodedToken(token);
+        let isAdmin = false;
+        let loggedInUsername = null;
+
+        if (decodedUser) {
+          isAdmin = decodedUser.role === "admin";
+          loggedInUsername = decodedUser.user;
+        }
+
+        usersBody.innerHTML = "";
+        allUsers.forEach((u) => {
+          const tr = document.createElement("tr");
+
+          // Decide what to show in the password column
+          let pwdDisplay = "••••••••";
+          let pwdStyle = "";
+
+          if (tableState === "admin_leaked") {
+            // Admin attack succeeded — show ALL passwords in red
+            pwdDisplay = u.password;
+            pwdStyle = "color: #c00; font-weight: bold;";
+          } else if (tableState === "logged_in") {
+            if (isAdmin) {
+              // Real admin viewing
+              pwdDisplay = u.password;
+              pwdStyle = "color: #070; font-weight: bold;";
+            } else if (u.username === loggedInUsername) {
+              // Logged in as user — show only their own password
+              pwdDisplay = u.password;
+              pwdStyle = "color: #05a; font-weight: bold;";
+            }
+          }
+
+          const isCurrent = u.username === loggedInUsername;
+          const roleTag =
+            u.role === "admin"
+              ? `<span class="tag tag-admin">admin</span>`
+              : `<span class="tag tag-user">user</span>`;
+
+          tr.innerHTML = `
+          <td>${u.id}</td>
+          <td>${isCurrent ? "<strong>" + u.username + "</strong>" : u.username}</td>
+          <td>${roleTag}</td>
+          <td>${u.email}</td>
+          <td style="${pwdStyle}">${pwdDisplay}</td>
+        `;
+
+          if (isCurrent && tableState !== "admin_leaked") {
+            tr.style.background = "#fff8e1";
+          }
+          if (tableState === "admin_leaked") {
+            tr.style.background = "#fff0f0";
+          }
+
+          usersBody.appendChild(tr);
+        });
+      }
+
+      // Function to populate table directly from backend server data
+      function updateTableWithServerData(serverUsers, isLeaked = false) {
+        usersBody.innerHTML = "";
+        serverUsers.forEach((u) => {
+          const tr = document.createElement("tr");
+
+          let pwdDisplay = u.password || "••••••••";
+          let pwdStyle = u.password
+            ? isLeaked
+              ? "color: #c00; font-weight: bold;"
+              : "color: #070; font-weight: bold;"
+            : "";
+
+          const roleTag =
+            u.role === "admin"
+              ? `<span class="tag tag-admin">admin</span>`
+              : `<span class="tag tag-user">user</span>`;
+
+          tr.innerHTML = `
+          <td>${u.id}</td>
+          <td><strong>${u.username}</strong></td>
+          <td>${roleTag}</td>
+          <td>${u.email}</td>
+          <td style="${pwdStyle}">${pwdDisplay}</td>
+        `;
+
+          if (isLeaked) {
+            tr.style.background = "#fff0f0";
+          }
+
+          usersBody.appendChild(tr);
+        });
+      }
+
+      // Initial render + restore display on page load
+      renderTable();
+      if (token && tableState === "admin_leaked") {
+        setTokenDisplay(
+          tamperedToken,
+          "⚠️ TAMPERED — adarsh pretending to be admin",
+        );
+      } else if (token) {
+        setTokenDisplay(token, "LEGIT — adarsh (user)");
+      }
+
+      // Check server on page load in case token is pasted
+      async function checkServerOnLoad() {
+        const activeToken =
+          tableState === "admin_leaked" && tamperedToken
+            ? tamperedToken
+            : token;
+        if (!activeToken) return;
+
+        try {
+          const res = await fetch(`${API}/dashboard`, {
+            headers: { Authorization: `Bearer ${activeToken}` },
+          });
+          const data = await res.json();
+          console.log("Page load server check data:", data);
+
+          if (data.all_users) {
+            // The backend believes this token is an admin
+            updateTableWithServerData(
+              data.all_users,
+              tableState === "admin_leaked",
+            );
+          }
+        } catch (err) {
+          console.error("Failed to fetch on load:", err);
+        }
+      }
+      checkServerOnLoad();
+
+      function show(data) {
+        output.textContent = JSON.stringify(data, null, 2);
+      }
+
+      function setTokenDisplay(t, label) {
+        _lastToken = t;
+        tokenDisplay.textContent = `[${label}] ${t}`;
+      }
+
+      document.getElementById("copyTokenBtn").addEventListener("click", () => {
+        if (!_lastToken) {
+          alert("No token to copy!");
+          return;
+        }
+        navigator.clipboard
+          .writeText(_lastToken)
+          .then(() => alert("Token copied to clipboard!"))
+          .catch((err) => alert("Failed to copy!"));
+      });
+
+      // Step 1: Login
+      document
+        .getElementById("loginBtn")
+        .addEventListener("click", async () => {
+          try {
+            const res = await fetch(`${API}/login`, {
+              method: "POST",
+              credentials: "include",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ username: "adarsh", password: "pass123" }),
+            });
+            const data = await res.json();
+            token = data.token;
+            tamperedToken = "";
+            tableState = "logged_in";
+            saveState();
+            renderTable();
+            setTokenDisplay(token, "LEGIT — adarsh (user)");
+            show(data);
+          } catch (err) {
+            show({ error: err.message });
+          }
+        });
+
+      // Step 2: Dashboard with legit token
+      document.getElementById("dashBtn").addEventListener("click", async () => {
+        if (!token) {
+          show({ error: "Login first!" });
+          return;
+        }
+        const res = await fetch(`${API}/dashboard`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        console.log("Data from server (dashBtn):", data);
+        if (data.all_users) {
+          updateTableWithServerData(data.all_users);
+        }
+        show(data);
+      });
+
+      document
+        .getElementById("dashSecureBtn")
+        .addEventListener("click", async () => {
+          if (!token) {
+            show({ error: "Login first!" });
+            return;
+          }
+          const res = await fetch(`${API}/dashboard-secure`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          const data = await res.json();
+          console.log("Data from server (dashSecureBtn):", data);
+          if (data.all_users) {
+            updateTableWithServerData(data.all_users);
+          }
+          show(data);
+        });
+
+      // Step 3: Tamper
+      document.getElementById("tamperBtn").addEventListener("click", () => {
+        if (!token) {
+          show({ error: "Login first!" });
+          return;
+        }
+
+        const parts = token.split(".");
+        const payload = JSON.parse(atob(parts[1]));
+        const original = { ...payload };
+
+        payload.role = "admin";
+
+        const tamperedPayload = btoa(JSON.stringify(payload)).replace(/=/g, "");
+        tamperedToken = parts[0] + "." + tamperedPayload + "." + parts[2];
+        saveState();
+
+        setTokenDisplay(
+          tamperedToken,
+          "⚠️ TAMPERED — adarsh pretending to be admin",
+        );
+
+        show({
+          step: "Token tampered!",
+          original_payload: original,
+          tampered_payload: payload,
+          note: "Changed role to 'admin' WITHOUT the secret key. Signature is now invalid but jwt.decode() won't check it...",
+        });
+      });
+
+      // Step 4: Dashboard with tampered token
+      document
+        .getElementById("tamperDashBtn")
+        .addEventListener("click", async () => {
+          if (!tamperedToken) {
+            show({ error: "Tamper the token first (Step 3)!" });
+            return;
+          }
+          const res = await fetch(`${API}/dashboard`, {
+            headers: { Authorization: `Bearer ${tamperedToken}` },
+          });
+          const data = await res.json();
+          console.log("Data from server (tamperDashBtn):", data);
+
+          if (data.all_users) {
+            updateTableWithServerData(data.all_users, true);
+          }
+
+          // Attack succeeded — reveal all passwords in the table
+          tableState = "admin_leaked";
+          saveState();
+          if (!data.all_users) renderTable(); // fallback if server didn't return all_users
+
+          show({
+            route: "/dashboard (VULNERABLE — jwt.decode)",
+            result:
+              "🔓 ATTACK SUCCEEDED! adarsh sees ALL users' emails, phones, salaries, and PASSWORDS!",
+            response: data,
+          });
+        });
+
+      document
+        .getElementById("tamperSecureBtn")
+        .addEventListener("click", async () => {
+          if (!tamperedToken) {
+            show({ error: "Tamper the token first (Step 3)!" });
+            return;
+          }
+          const res = await fetch(`${API}/dashboard-secure`, {
+            headers: { Authorization: `Bearer ${tamperedToken}` },
+          });
+          const data = await res.json();
+          console.log("Data from server (tamperSecureBtn):", data);
+
+          show({
+            route: "/dashboard-secure (SAFE — jwt.verify)",
+            result: "✅ ATTACK BLOCKED — tampered token rejected!",
+            response: data,
+          });
+        });
+
+      // Step 1.5: Logout cleanly
+      document.getElementById("logoutBtn").addEventListener("click", () => {
+        document.cookie =
+          "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+        token = "";
+        tamperedToken = "";
+        tableState = "default";
+        lastCookie = "";
+        saveState();
+        renderTable();
+        setTokenDisplay("No token", "NONE");
+        show({
+          message: "Logged out. Clear local storage and cookies completed.",
+        });
+      });
+
+      // Poll for manual DevTools changes (user requested "constantly check if token is there")
+      setInterval(() => {
+        const currentCookie =
+          (document.cookie.match(/(^| )token=([^;]+)/) || [])[2] || "";
+        const currentTokenH = localStorage.getItem("jwt_token") || "";
+        const currentTamperedH = localStorage.getItem("jwt_tampered") || "";
+
+        let changed = false;
+
+        if (currentCookie !== lastCookie) {
+          lastCookie = currentCookie;
+          changed = true;
+          token = currentCookie;
+          tamperedToken = currentCookie;
+        }
+
+        if (currentTokenH !== lastTokenH) {
+          lastTokenH = currentTokenH;
+          if (!changed) {
+            token = currentTokenH;
+            changed = true;
+          }
+        }
+
+        if (currentTamperedH !== lastTamperedH) {
+          lastTamperedH = currentTamperedH;
+          if (!changed) {
+            tamperedToken = currentTamperedH;
+            changed = true;
+          }
+        }
+
+        // Only react if something manually changed in DevTools!
+        if (changed) {
+          if (!token && !tamperedToken) {
+            tableState = "default";
+          } else if (tableState === "default" && token) {
+            const parsed = getDecodedToken(token);
+            if (parsed && parsed.role === "admin") {
+              tableState = "admin_leaked";
+            } else {
+              tableState = "logged_in";
+            }
+          }
+
+          saveState();
+          renderTable();
+
+          if (token && tableState === "admin_leaked") {
+            setTokenDisplay(
+              tamperedToken,
+              "⚠️ TAMPERED — adarsh pretending to be admin",
+            );
+          } else if (token) {
+            setTokenDisplay(token, "LEGIT — adarsh (user)");
+          } else {
+            setTokenDisplay("No token", "NONE");
+          }
+
+          if (token) {
+            checkServerOnLoad();
+          }
+        }
+      }, 1000);
+    </script>
+  </body>
+</html>
