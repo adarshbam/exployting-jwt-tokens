@@ -76,5 +76,10 @@ Open the `frontend` folder and use **Live Server** (recommended) to serve the HT
 -   **Secure Cookies**: Use `httpOnly` and `Secure` flags to prevent client-side JS from reading tokens.
 -   **Secret Management**: Keep symmetric secrets long, complex, and hidden.
 
+## 🛠️ Resolved Versions (Fixes)
+These vulnerabilities have been patched in modern library versions. Make sure your `jsonwebtoken` library is **above version 9.0.0** where all these functionalities have been completely fixed:
+-   **"none" Algorithm Attack**: Fixed in version **4.2.2 (2015)**. The library no longer accepts "none" if a secret is provided to `jwt.verify`.
+-   **Algorithm Confusion (RS256 → HS256)**: Completely fixed in version **9.0.0 (2022)**. The library now explicitly rejects symmetric algorithm evaluation when passed an asymmetric public key string (like a PEM file).
+
 ## ⚠️ Disclaimer
 This is for **educational purposes only**. Never use these techniques on systems you do not have permission to test.

@@ -163,6 +163,9 @@ export default function DecodeDemo() {
       <div className="page-header">
         <h1>🔓 JWT Decoding Vulnerability</h1>
         <p>Shows why <code>jwt.decode()</code> instead of <code>jwt.verify()</code> causes <strong>serious data breaches</strong>.</p>
+        <div style={{ marginTop: '12px', padding: '12px', backgroundColor: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)', borderRadius: '8px', color: '#34d399' }}>
+          <strong>✅ Vulnerability Fixed:</strong> Make sure your <code>jsonwebtoken</code> version is <strong>above 9.0.0</strong> where all these functionalities have been completely fixed! The <code>"none"</code> algorithm signing vulnerability was specifically fixed back in version <strong>4.2.2 (2015)</strong>.
+        </div>
       </div>
 
       <div className="glass-card">

@@ -129,11 +129,9 @@ app.get("/dashboard-secure", (req, res) => {
       your_profile: me || decoded,
     });
   } catch (err) {
-    res
-      .status(401)
-      .json({
-        error: "❌ Invalid or tampered token rejected (Algorithm Mismatch)!",
-      });
+    res.status(401).json({
+      error: "❌ Invalid or tampered token rejected (Algorithm Mismatch)!",
+    });
   }
 });
 

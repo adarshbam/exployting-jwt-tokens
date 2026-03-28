@@ -1,6 +1,7 @@
 import React from 'react';
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import DecodeDemo from './pages/DecodeDemo';
+import AlgoConfusionDemo from './pages/AlgoConfusionDemo';
 
 function App() {
   const location = useLocation();
@@ -19,12 +20,19 @@ function App() {
           >
             Decode Vulnerability
           </Link>
+          <Link 
+            to="/algo" 
+            className={`nav-link ${location.pathname === '/algo' ? 'active' : ''}`}
+          >
+            Algorithm Confusion
+          </Link>
         </div>
       </nav>
 
       <main className="main-content">
         <Routes>
           <Route path="/" element={<DecodeDemo />} />
+          <Route path="/algo" element={<AlgoConfusionDemo />} />
         </Routes>
       </main>
     </div>
