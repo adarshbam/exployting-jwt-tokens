@@ -146,7 +146,7 @@ app.get("/dashboard", (req, res) => {
 
   try {
     // ❌ BAD: jwt.decode() does NOT verify the signature!
-    const decoded = jwt.verify(token, SECRET);
+    const decoded = jwt.decode(token);
 
     if (decoded.role === "admin") {
       // Admin sees EVERYTHING — all users with sensitive data
